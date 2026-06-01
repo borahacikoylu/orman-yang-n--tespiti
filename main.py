@@ -1,6 +1,6 @@
 # python main.py orman_video.mp4
 # python main.py orman_video.mp4 --debug
-# python main.py orman_video.mp4 --yolo          # YOLO + CV fusion modu
+# python main.py orman_video.mp4 --yolo
 
 import os
 import sys
@@ -28,11 +28,6 @@ if __name__ == "__main__":
     if args.debug:
         print(f"Python sürümü: {sys.version}")
         print("Debug modu aktif")
-
-    if args.yolo:
-        print("Mod: YOLO + CV fusion")
-    else:
-        print("Mod: CV (OpenCV)")
 
     ui = FireDetectionUI(video_source=args.video, use_yolo=args.yolo)
     try:

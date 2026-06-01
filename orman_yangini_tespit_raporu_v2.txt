@@ -1,0 +1,69 @@
+ORMAN YANGINI TESPİT SİSTEMİ: VİDEO TABANLI ERKEN UYARI YAKLAŞIMI
+
+Hazırlayan: [Ad Soyad]
+Bölüm: [Bölüm Adı]
+E-posta: [eposta@ornek.com]
+Tarih: 2 Haziran 2026
+
+Öz
+Bu çalışmada, orman yangınlarını video akışları üzerinden erken tespit etmeyi amaçlayan bir sistem sunulmaktadır. Sistem, klasik görüntü işleme yöntemleri ile isteğe bağlı YOLO tabanlı tespiti birleştiren modüler bir mimariye sahiptir. Alev ve duman sinyalleri ayrı ayrı değerlendirilmekte, ardından çok seviyeli alarm motoru ile risk kararı verilmektedir. Ardışık kare analizi, alan büyümesi takibi ve histerezis mekanizması sayesinde yanlış alarmın azaltılması hedeflenmektedir.
+
+1. Giriş
+Orman yangınlarının erken fark edilmesi, müdahale süresini kısaltarak çevresel ve ekonomik kayıpları azaltır. Kamera tabanlı analiz sistemleri, geniş alanların sürekli izlenebilmesi nedeniyle pratik bir çözüm sunar. Ancak farklı hava ve ışık koşulları tek bir yönteme dayalı sistemlerde kararsızlığa yol açabilir. Bu nedenle projede, klasik OpenCV yaklaşımı ile model tabanlı tespit birlikte kullanılabilen bir yapı tasarlanmıştır.
+
+2. Materyal ve Metot
+2.1. Girdi Yapısı
+Güncel sistem yalnızca video dosyası girdisiyle çalışmaktadır. Her video, karelere ayrılarak belirli örnekleme oranıyla analiz edilir.
+
+2.2. Ön Filtreleme
+OpenCVFilter modülü, gereksiz hesaplamayı azaltmak için yalnızca şüpheli kareleri tespit aşamasına aktarır. Bu adımda:
+- HSV uzayında alev/duman benzeri renk dağılımı,
+- MOG2 tabanlı hareket bilgisi
+birlikte değerlendirilir.
+
+2.3. CVDetector ile Tespit
+CVDetector modülü iki ana sınıf üretir:
+- fire (alev)
+- smoke (duman)
+
+Alev tarafında HSV maskeleme, kontur analizi, optik akış ve alan büyüme skoru ağırlıklı olarak birleştirilir. Duman tarafında seçili konturdan alan oranı ve güven puanı hesaplanır.
+
+2.4. Hibrit Mod
+Sistem, `--yolo` parametresi ile YOLO + CV fusion modunda çalışabilir. Bu modda sınıf bazında güven skorları karşılaştırılır ve uygun durumda YOLO kutuları kullanılır.
+
+2.5. Alarm Motoru
+AlertEngine tarafından üç seviye üretilir:
+- WATCH
+- WARNING
+- CRITICAL
+
+Karar mekanizmasında:
+- güven skorlarının yumuşatılması,
+- ardışık tespit kare sayısı,
+- tespit alanı ve alan büyüme eğilimi,
+- seviye geçiş histerezisi
+kullanılmaktadır.
+
+Ek olarak, yalnızca yoğun duman görülen sahneler için smoke-only eşikleriyle risk seviyesi yükseltilebilmektedir.
+
+3. Yazılım Mimarisi
+- `main.py`: Çalıştırma ve argüman yönetimi
+- `ui.py`: Gerçek zamanlı arayüz ve analiz döngüsü
+- `video_reader.py`: Video okuma ve kare örnekleme
+- `opencv_filter.py`: Şüpheli kare eleme
+- `cv_detector.py`: OpenCV tabanlı alev/duman tespiti
+- `yolo_detector.py`: YOLO tabanlı sınıf tespiti (opsiyonel)
+- `alert_engine.py`: Alarm seviyesi üretimi
+- `logger.py`: Olay kaydı ve alarm tetikleme
+- `config.py`: Eşik ve parametreler
+
+4. Gözlemler
+Sistem, duman ve alev sinyallerini ayrı takip ettiği için karar süreçlerinde daha kontrollü davranmaktadır. Özellikle dumanın baskın olduğu örneklerde smoke-only eşikleri alarm gecikmesini azaltmada etkilidir. Buna karşılık, farklı kamera açıları ve atmosfer koşulları için saha kalibrasyonu gereklidir.
+
+5. Sonuç
+Video tabanlı bu erken uyarı sistemi, klasik görüntü işleme ve hibrit tespiti bir araya getirerek pratik bir yangın tespit altyapısı sunmaktadır. Çok seviyeli alarm mekanizması ve duman-odaklı iyileştirmeler sistemin gerçek kullanım senaryolarındaki güvenilirliğini artırmaktadır.
+
+Kaynakça
+[1] OpenCV Documentation, https://docs.opencv.org/
+[2] Ultralytics YOLO Documentation, https://docs.ultralytics.com/
+[3] Goodfellow, I., Bengio, Y., Courville, A., Deep Learning, MIT Press.

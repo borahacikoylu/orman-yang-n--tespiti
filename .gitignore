@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Python cache / local env
+__pycache__/
+*.py[cod]
+.venv/
+
+# Runtime outputs
+logs/
+
+# Large local test media
+test_*.mp4
+deneme*.mp4

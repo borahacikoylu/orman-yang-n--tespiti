@@ -25,17 +25,14 @@ class VideoReader:
         self.frame_counter = 0
 
     def read_frame(self):
-        ret, frame = self.capture.read()
-        if not ret:
-            return None
-
-        self.frame_counter += 1
-        if self.frame_counter % self.skip_rate != 0:
-            return self.read_frame()
-
-        frame = cv2.resize(frame, (INPUT_SIZE, INPUT_SIZE))
-        frame_id = self.frame_counter
-        return frame, frame_id
+        while True:
+            ret, frame = self.capture.read()
+            if not ret:
+                return None
+            self.frame_counter += 1
+            if self.frame_counter % self.skip_rate == 0:
+                frame = cv2.resize(frame, (INPUT_SIZE, INPUT_SIZE))
+                return frame, self.frame_counter
 
     def get_fps(self):
         return self.fps

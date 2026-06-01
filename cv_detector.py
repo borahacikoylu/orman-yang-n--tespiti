@@ -124,6 +124,11 @@ class CVDetector:
         self.smoke_ratio = (smoke_pixels / float(total_pixels)) if total_pixels > 0 else 0.0
         self.last_smoke_mask = smoke_mask
 
+        # If more than 35% of the frame is fire-coloured the entire scene is
+        # likely lit by sunset/sunrise light rather than an actual fire.
+        if fire_ratio > 0.35:
+            return 0.0
+
         if fire_ratio < 0.0015:
             return 0.0
         if fire_ratio < 0.008:
@@ -206,20 +211,30 @@ class CVDetector:
             poly_sigma=1.2,
             flags=0,
         )
+        self.prev_gray = gray
 
         magnitude, angle = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-        mean_magnitude = float(np.mean(magnitude))
-        angle_variance = float(np.var(angle))
+
+        fire_mask = self._build_fire_mask(frame)
+        fire_pixel_count = cv2.countNonZero(fire_mask)
+
+        if fire_pixel_count > 50:
+            # Analyse motion only inside fire-coloured regions to avoid false
+            # positives from wind-blown trees or camera shake.
+            masked_mag = magnitude[fire_mask > 0]
+            masked_angle = angle[fire_mask > 0]
+            mean_magnitude = float(np.mean(masked_mag))
+            angle_variance = float(np.var(masked_angle))
+        else:
+            mean_magnitude = float(np.mean(magnitude))
+            angle_variance = float(np.var(angle))
 
         mag_score = min(mean_magnitude / FLOW_MAG_SCALE, 1.0)
         var_score = min(angle_variance / FLOW_VAR_SCALE, 1.0)
-        flow_score = (mag_score * 0.5) + (var_score * 0.5)
-
-        self.prev_gray = gray
-        return float(flow_score)
+        return float((mag_score * 0.5) + (var_score * 0.5))
 
     def _analyze_growth(self, current_area):
-        self.area_history.append(float(current_area))
+        # area_history is maintained by _analyze_contours; do not append here.
         if len(self.area_history) < 3:
             return 0.0
 

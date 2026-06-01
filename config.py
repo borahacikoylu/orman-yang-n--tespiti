@@ -48,6 +48,11 @@ AREA_WATCH_MIN = 0.005
 AREA_CRITICAL_MIN = 0.03
 AREA_GROWTH_THRESHOLD = 0.20
 
+# YOLO DETECTOR settings: model path, confidence, NMS IoU, and target class names.
+MODEL_PATH = "yolov8s_fire.pt"
+IOU_THRESHOLD = 0.45
+CLASSES = ["fire", "smoke"]
+
 # LOGGER settings: sets log storage path and alarm cooldown timing.
 LOG_DIR = "logs"
 ALARM_COOLDOWN_SEC = 30

@@ -10,8 +10,9 @@ from config import INPUT_SIZE
 
 
 class FireDetectionUI:
-    def __init__(self, video_source):
+    def __init__(self, video_source, use_yolo=False):
         self.video_source = video_source
+        self.use_yolo = use_yolo
         self.root = tk.Tk()
         self.root.title("Orman Yangını Tespit Sistemi")
 
@@ -130,6 +131,14 @@ class FireDetectionUI:
         from alert_engine import AlertEngine
         from logger import FireLogger
 
+        yolo_detector = None
+        if self.use_yolo:
+            try:
+                from yolo_detector import YOLODetector
+                yolo_detector = YOLODetector()
+            except Exception as exc:
+                print(f"YOLO yüklenemedi, CV moduna geçiliyor: {exc}")
+
         reader = None
         try:
             reader = VideoReader(self.video_source)
@@ -153,8 +162,15 @@ class FireDetectionUI:
 
                 suspicious = filter_engine.is_suspicious(frame)
                 if suspicious:
-                    detection_result = detector.detect(frame, frame_id)
-                    frame_to_show = detector.draw_boxes(frame, detection_result)
+                    cv_result = detector.detect(frame, frame_id)
+
+                    if yolo_detector is not None:
+                        yolo_result = yolo_detector.detect(frame, frame_id)
+                        detection_result = self._fuse_detections(cv_result, yolo_result)
+                        frame_to_show = yolo_detector.draw_boxes(frame, detection_result)
+                    else:
+                        detection_result = cv_result
+                        frame_to_show = detector.draw_boxes(frame, detection_result)
                 else:
                     detection_result = {
                         "fire": {"confidence": 0.0, "bbox": None, "area_ratio": 0.0},
@@ -194,6 +210,7 @@ class FireDetectionUI:
                         "confidence_smoke": detection_result["smoke"]["confidence"],
                         "area_ratio": detection_result["fire"]["area_ratio"],
                         "frame_id": detection_result["frame_id"],
+                        "fps": fps,
                     }
                 )
         finally:
@@ -235,6 +252,7 @@ class FireDetectionUI:
             self.fire_progress["value"] = self._fire_bar_smooth
             self.smoke_progress["value"] = self._smoke_bar_smooth
             self.area_value_label.config(text=f"{float(latest_info['area_ratio']):.4f}")
+            self.fps_value_label.config(text=f"{float(latest_info.get('fps', 0.0)):.1f}")
             self.seq_value_label.config(text=str(latest_info["frame_id"]))
             self._update_display_level(latest_info["level"])
             self._set_banner(self._display_level)
@@ -275,6 +293,31 @@ class FireDetectionUI:
     def _toggle_pause(self):
         self.paused = not self.paused
         self.toggle_button.config(text="Devam" if self.paused else "Durdur")
+
+    def _fuse_detections(self, cv_result, yolo_result):
+        """Combine CV and YOLO detections by taking the higher confidence for
+        each class and preferring YOLO bounding boxes when available."""
+        fused = {"frame_id": cv_result.get("frame_id", 0)}
+        for cls in ("fire", "smoke"):
+            cv_data = cv_result.get(cls, {})
+            yolo_data = yolo_result.get(cls, {})
+            cv_conf = float(cv_data.get("confidence", 0.0))
+            yolo_conf = float(yolo_data.get("confidence", 0.0))
+            # Weighted average: YOLO gets more weight when it fires confidently.
+            if yolo_conf > 0.0:
+                fused_conf = max(cv_conf * 0.4 + yolo_conf * 0.6, cv_conf, yolo_conf)
+                bbox = yolo_data.get("bbox") or cv_data.get("bbox")
+                area = float(yolo_data.get("area_ratio") or cv_data.get("area_ratio", 0.0))
+            else:
+                fused_conf = cv_conf
+                bbox = cv_data.get("bbox")
+                area = float(cv_data.get("area_ratio", 0.0))
+            fused[cls] = {
+                "confidence": min(fused_conf, 1.0),
+                "bbox": bbox,
+                "area_ratio": area,
+            }
+        return fused
 
     def _queue_latest(self, q, value):
         try:

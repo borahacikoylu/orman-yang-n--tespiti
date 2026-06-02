@@ -13,8 +13,8 @@ class YOLODetector:
             with open(MODEL_PATH, "rb"):
                 pass
         except FileNotFoundError:
-            print(f"Warning: model file not found at '{MODEL_PATH}'. Falling back to 'yolov8s.pt'.")
-            model_to_load = "yolov8s.pt"
+            print(f"Warning: model file not found at '{MODEL_PATH}'. Falling back to generic 'yolov8n.pt'.")
+            model_to_load = "yolov8n.pt"
 
         self.model = YOLO(model_to_load)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

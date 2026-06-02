@@ -1,6 +1,6 @@
 # python main.py orman_video.mp4
 # python main.py orman_video.mp4 --debug
-# python main.py orman_video.mp4 --yolo
+# python main.py orman_video.mp4 --cv-only   (sadece OpenCV, modelsiz)
 
 import os
 import sys
@@ -14,9 +14,9 @@ if __name__ == "__main__":
     parser.add_argument("video", help="Video dosya yolu")
     parser.add_argument("--debug", action="store_true", help="Debug çıktısını aç")
     parser.add_argument(
-        "--yolo",
+        "--cv-only",
         action="store_true",
-        help="YOLO + CV fusion modunu etkinleştir (fire-trained model gerekir)",
+        help="Sadece OpenCV detektörünü kullan, modeli devre dışı bırak",
     )
     args = parser.parse_args()
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
         print(f"Python sürümü: {sys.version}")
         print("Debug modu aktif")
 
-    ui = FireDetectionUI(video_source=args.video, use_yolo=args.yolo)
+    ui = FireDetectionUI(video_source=args.video, use_yolo=not args.cv_only)
     try:
         ui.run()
     except KeyboardInterrupt:

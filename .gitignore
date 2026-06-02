@@ -12,3 +12,6 @@ logs/
 # Large local test media
 test_*.mp4
 deneme*.mp4
+
+# Model weights (large binary files)
+*.pt

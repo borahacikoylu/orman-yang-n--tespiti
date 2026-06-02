@@ -1,0 +1,46 @@
+Orman Yangını Tespit Sisteminin Video Tabanlı Güncel Mimarisi ve Deneysel Değerlendirmesi
+
+[Ad Soyad]
+[Üniversite / Bölüm]
+[E-posta]
+ORCID: [Varsa]
+
+Öz
+Bu çalışma, orman yangını tespiti amacıyla geliştirilen video tabanlı bir erken uyarı sisteminin güncel sürümünü sunmaktadır. Sistem yalnızca video girdisi ile çalışmakta; OpenCV tabanlı ön-eleme, isteğe bağlı YOLO tabanlı nesne tespiti, çok seviyeli alarm motoru ve kullanıcı arayüzü bileşenlerini içermektedir. Güncel sürümde varsayılan çalışma modu model destekli tespittir ve `--cv-only` parametresi ile yalnızca klasik görüntü işleme moduna geçilebilmektedir. Alarm üretimi aşamasında ardışık kare analizi, güven skoru yumuşatma, alan büyümesi kontrolü ve histerezis mekanizması birlikte kullanılarak yanlış alarmların azaltılması hedeflenmiştir. Elde edilen bulgular, sistemin gerçek zamanlı izleme senaryolarında operasyonel olarak kullanılabilir bir çerçeve sunduğunu göstermektedir.
+
+1. Giriş
+Orman yangınları, erken tespit edilemediğinde geniş ekosistem kayıplarına ve yüksek ekonomik zararlara yol açmaktadır. Bu nedenle kamera tabanlı otomatik izleme sistemleri, geniş alanların kesintisiz denetlenmesinde önemli bir çözüm haline gelmiştir. Ancak dış ortam koşulları (ışık değişimi, sis, bulut, rüzgar kaynaklı hareket, kamera titreşimi) nedeniyle karar mekanizmasının tek bir sinyale dayandırılması güvenilir sonuç vermemektedir. Bu çalışmada, tespit ve alarm katmanlarını ayrıştıran modüler bir yazılım mimarisi ele alınmış, güncellenen sürümde yalnızca video akışı odağında çalışan yapı akademik rapor formatında değerlendirilmiştir.
+
+2. Materyal ve Metot
+2.1. Veri Seti
+Sistem, video dosyalarını girdi olarak alan bir akış mimarisine sahiptir. Testlerde proje klasöründeki farklı yangın senaryolarını içeren videolar kullanılmıştır. Video kareleri, `video_reader.py` modülünde FPS bilgisine göre örneklenmiş ve işlem yükünü dengelemek için sabit giriş boyutuna (`INPUT_SIZE=640`) yeniden ölçeklenmiştir. Bu yaklaşım, hem gerçek zamanlı performansı korumak hem de tespit modüllerine standart giriş sağlamak için tercih edilmiştir.
+
+2.2. Sistem Mimarisi
+Bu bölümde güncel sürümdeki ana bileşenler özetlenmiştir.
+
+2.2.1. Şüpheli Kare Ön-Eleme
+`opencv_filter.py` modülü, analiz hattının ilk aşamasıdır. İlk 30 kare MOG2 arka plan modeli için ısınma amacıyla kullanılır. Daha sonra HSV uzayında alev/duman benzeri renk dağılımları ve hareket bilgisi birlikte değerlendirilir. Alev için renk sinyali tek başına güçlü kabul edilirken, duman için ek olarak hareket koşulu aranır. Böylece sis, bulut veya durağan açık renk bölgelerden kaynaklanabilecek yanlış tetiklemeler azaltılmaktadır.
+
+2.2.2. Tespit Katmanı
+Sistem iki modda çalışır. Varsayılan modda `yolo_detector.py` ile model tabanlı tespit yapılır; `--cv-only` parametresi verildiğinde yalnızca `cv_detector.py` kullanılır. YOLO tarafında model yolu `MODEL_PATH` parametresinden okunur (`fire_model.pt`) ve model bulunamazsa `yolov8n.pt` dosyasına geri düşülür. CV tarafında HSV maskeleme, kontur özellikleri, optik akış ve alan büyüme analizi birleştirilerek alev güven skoru üretilir. Duman için seçili konturun alan oranına dayalı güven değeri hesaplanır.
+
+2.2.3. Alarm Motoru
+`alert_engine.py` modülü, tespit sonuçlarını dört seviyede değerlendirir: CLEAR, WATCH, WARNING ve CRITICAL. Karar süreci; birleşik güven skoru, birleşik alan oranı, ardışık tespit sayısı ve alan büyüme eğilimi üzerinden yürütülür. Seviye geçişlerinde histerezis uygulanarak ani dalgalanmaların etkisi azaltılır. WARNING ve CRITICAL seviyeleri için zaman tabanlı doğrulama penceresi bulunur; doğrulama sonrası olay “confirmed” olarak işaretlenir ve kayıt/alarm süreci tetiklenir.
+
+2.3. Performans Metrikleri
+Sistemin davranışı arayüz ve log çıktıları üzerinden izlenmiştir. Kullanılan temel göstergeler şunlardır: (i) alev ve duman güven skorları, (ii) tespit edilen alan oranı, (iii) alarm seviyesinin zaman içindeki kararlılığı, (iv) doğrulanan olay sayısı. Ayrıca günlük JSON logları sayesinde olayların zaman damgası, kare numarası ve seviye bilgisi saklanarak sonradan analiz imkanı sağlanmıştır.
+
+3. Deneysel Bulgular
+3.1. Deneysel Kurulumlar
+Deneyler, Tkinter tabanlı arayüz üzerinden video analizi akışı ile gerçekleştirilmiştir. Sistem iki farklı çalışma düzeninde değerlendirilmiştir: model destekli varsayılan mod ve yalnızca klasik yöntem kullanan `--cv-only` modu. Her iki durumda da aynı alarm motoru eşikleri korunmuş, böylece mimari farkın alarm davranışına etkisi gözlenmiştir.
+
+3.2. Bulgular
+Gözlemler, şüpheli kare ön-eleme yaklaşımının hesaplama maliyetini düşürdüğünü ve gereksiz tespit çağrılarını azalttığını göstermiştir. Model destekli modda yangın/duman sınıfları daha hızlı ve daha belirgin kutularla işaretlenmiştir. CV-only modunda ise çevresel değişkenliğe bağlı olarak skor dalgalanması daha yüksek olabilmektedir; buna karşın alarm katmanındaki yumuşatma ve histerezis mekanizmaları seviye geçişlerini daha kararlı hale getirmektedir. Doğrulama penceresi kullanımı, kısa süreli gürültü kaynaklı yanlış alarm olasılığını azaltan önemli bir bileşen olarak öne çıkmıştır.
+
+4. Tartışma ve Sonuçlar
+Bu çalışmada sunulan güncel sürüm, yalnızca video girdisi ile çalışan ve sahada uygulanabilirliği artırılmış bir orman yangını tespit altyapısı sunmaktadır. Mimari sadeleştirilmiş, fotoğraf klasörü desteği kaldırılmış ve operasyonel odak video akışı üzerine taşınmıştır. Varsayılan model tabanlı mod ile hızlı sınıf tespiti sağlanırken, `--cv-only` seçeneği sayesinde modelsiz kullanım da korunmuştur. Sonuç olarak sistem, modüler yapısı, çok seviyeli alarm üretimi ve kayıt mekanizmasıyla gerçek zamanlı erken uyarı ihtiyaçları için uygun bir temel oluşturmaktadır. Gelecek çalışmalarda farklı saha koşullarını temsil eden daha geniş video setleriyle eşik kalibrasyonu yapılarak sistemin genellenebilirliği artırılabilir.
+
+Kaynakça
+[1] OpenCV Documentation, https://docs.opencv.org/
+[2] Ultralytics YOLO Documentation, https://docs.ultralytics.com/
+[3] Python Tkinter Documentation, https://docs.python.org/3/library/tkinter.html

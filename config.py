@@ -49,7 +49,8 @@ AREA_CRITICAL_MIN = 0.03
 AREA_GROWTH_THRESHOLD = 0.20
 
 # YOLO DETECTOR settings: model path, confidence, NMS IoU, and target class names.
-MODEL_PATH = "yolov8s_fire.pt"
+# fire_model.pt: YOLOv8m trained on fire/smoke dataset (Forest-Fire-Smoke-Detection project)
+MODEL_PATH = "fire_model.pt"
 IOU_THRESHOLD = 0.45
 CLASSES = ["fire", "smoke"]
 

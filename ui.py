@@ -10,7 +10,7 @@ from config import INPUT_SIZE
 
 
 class FireDetectionUI:
-    def __init__(self, video_source, use_yolo=False):
+    def __init__(self, video_source, use_yolo=True):
         self.video_source = video_source
         self.use_yolo = use_yolo
         self.root = tk.Tk()
@@ -162,15 +162,14 @@ class FireDetectionUI:
 
                 suspicious = filter_engine.is_suspicious(frame)
                 if suspicious:
-                    cv_result = detector.detect(frame, frame_id)
-
                     if yolo_detector is not None:
                         yolo_result = yolo_detector.detect(frame, frame_id)
-                        detection_result = self._fuse_detections(cv_result, yolo_result)
-                        frame_to_show = yolo_detector.draw_boxes(frame, detection_result)
+                        detection_result = yolo_result
+                        frame_to_show = yolo_detector.draw_boxes(frame, yolo_result)
                     else:
+                        cv_result = detector.detect(frame, frame_id)
                         detection_result = cv_result
-                        frame_to_show = detector.draw_boxes(frame, detection_result)
+                        frame_to_show = detector.draw_boxes(frame, cv_result)
                 else:
                     detection_result = {
                         "fire": {"confidence": 0.0, "bbox": None, "area_ratio": 0.0},
